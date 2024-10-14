@@ -16,7 +16,6 @@ export default function ApperalChild({ setProductId }) {
   let [catName, setCatName] = useState('');
   let [loading, setLoading] = useState(true); // Track loading state
 
-  window.scrollTo(0, 0);
   // Fetch all categories
   let getCategory = () => {
    

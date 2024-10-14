@@ -5,44 +5,46 @@ import $ from "jquery";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel";
+import toast, { Toaster } from "react-hot-toast";
+import NProgress from "nprogress";
+import "nprogress/nprogress.css";
 import Error from "./Error";
 
-export default function Product() {
-  // Initialize For Product was invalid Show 404 Page Error or first product images show
-
-  const [product, setProduct] = useState({}); // Initialize as an empty object
-  const [error, setError] = useState(false); // Use boolean error state
-  const [mainImage, setMainImage] = useState({
-    src: "", // Initial src will be empty
-    alt: "", // Initial alt text will be empty
-  });
-  const location = useLocation(); // Correct variable name
-  const currentId = location.pathname.split("/")[2]; // Extract product ID from the URL
+export default function Product({ setProductId }) {
+  // Initialize states
+  const [product, setProduct] = useState({});
+  const [error, setError] = useState(false);
+  const [mainImage, setMainImage] = useState({ src: "", alt: "" });
+  const location = useLocation();
+  const currentId = location.pathname.split("/")[2];
 
   useEffect(() => {
+    NProgress.start(); // Start loading indicator
+
     const fetchProduct = async () => {
       try {
         const response = await axios.get(
           `https://dummyjson.com/products/${currentId}`
         );
         if (response.status === 200) {
-          setProduct(response.data); // Set the fetched product data
+          setProduct(response.data);
 
-          // Set main image using the first image from product.images array
           if (response.data.images && response.data.images.length > 0) {
             setMainImage({
-              src: response.data.images[0], // Set the first image as main image
-              alt: response.data.title || "Product Image", // Set the alt text as product title or default
+              src: response.data.images[0],
+              alt: response.data.title || "Product Image",
             });
           }
         }
+        NProgress.done(); // Finish loading
       } catch (error) {
         console.error("Error fetching data:", error);
-        setError(true); // Set error to true
+        setError(true);
+        NProgress.done(); // Finish loading even in case of error
       }
     };
 
-    fetchProduct(); // Fetch product data
+    fetchProduct();
   }, [currentId]);
 
   // Initialize the Radio size buttons
@@ -259,12 +261,19 @@ export default function Product() {
     window.scrollTo(0, 0);
   }, []); // Empty dependency array ensures it only runs on mount
 
+
+  const handleAddToCart = (id) => {
+    setProductId(id);
+    toast.success("Product Added Successfully!");
+  };
+
   return (
     <>
       {error ? (
         <Error /> // Render the Error component when there's an error
       ) : (
         <>
+        <Toaster />
           <div
             id="modal"
             className="invisible opacity-0 transition-opacity duration-300 ease-in-out items-center justify-center h-screen w-screen fixed top-0 left-0 bg-black bg-opacity-60 z-20"
@@ -675,24 +684,18 @@ export default function Product() {
                     </p>
                   </div>
 
-                  <form class="space-y-5">
-                    <div class="block my-[12px]">
-                      <h5 class="font-barlow font-semibold text-[19px]">
+                  <form className="space-y-5">
+                    <div className="block my-[12px]">
+                      <h5 className="font-barlow font-semibold text-[19px]">
                         Size:
                       </h5>
                     </div>
-                    <div
-                      className="grid lg:grid-cols-3 s:grid-cols-2 md:grid-cols-2 gap-4"
-                      style={{ margin: "0px" }}
-                      id="selects"
-                    >
+                    <div className="grid lg:grid-cols-3 sm:grid-cols-2 md:grid-cols-2 gap-4" style={{ margin: "0px" }} id="selects">
                       {sizes.map((size, index) => (
                         <label
                           key={index}
                           className={`relative ${
-                            selectedSize === size
-                              ? "bg-mainColor text-white"
-                              : "bg-transparent text-mainColor"
+                            selectedSize === size ? "bg-mainColor text-white" : "bg-transparent text-mainColor"
                           } border border-mainColor px-[2px] py-[9px] font-cairo rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group cursor-pointer flex items-center justify-center`}
                         >
                           <input
@@ -703,64 +706,40 @@ export default function Product() {
                             checked={selectedSize === size}
                             onChange={() => handleChange(size)}
                           />
-                          <span
-                            className={`absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform ${
-                              selectedSize === size
-                                ? "translate-x-0"
-                                : "translate-x-[-100%]"
-                            } group-hover:translate-x-0`}
-                          ></span>
-                          <span className="relative z-10 group-hover:text-white text-center">
-                            {size}
-                          </span>
+                          <span className={`absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform ${
+                            selectedSize === size ? "translate-x-0" : "-translate-x-full"
+                          } group-hover:translate-x-0`}></span>
+                          <span className="relative z-10 group-hover:text-white text-center">{size}</span>
                         </label>
                       ))}
                     </div>
 
-                    {/* <!-- Color Label --> */}
-                    <div class="inline-block">
-                      <h5 class="font-barlow text-[19px]">
-                        <span class="font-semibold">Color:</span>
+                    <div className="inline-block">
+                      <h5 className="font-barlow text-[19px]">
+                        <span className="font-semibold">Color:</span>
                       </h5>
                     </div>
-
-                    {/* <!-- Select Field --> */}
-                    <div class="inline-block lg:w-40 s:w-40">
-                      <select
-                        name="color"
-                        id="color"
-                        class="block w-full rounded-[5px] border-gray-500 bg-[#f5f5f5] p-2 ml-2"
-                      >
+                    <div className="inline-block lg:w-40 sm:w-40">
+                      <select name="color" id="color" className="block w-full rounded-[5px] border-gray-500 bg-[#f5f5f5] p-2 ml-2">
                         <option value="">Select Color</option>
-                        <option value="1 Color">1 Color</option>
-                        <option value="2 Color">2 Color</option>
-                        <option value="3 Color">3 Color</option>
-                        <option value="4 Color">4 Color</option>
-                        <option value="4/1 Color">4/1 Color</option>
-                        <option value="4/2 Color">4/2 Color</option>
-                        <option value="4/3 Color">4/3 Color</option>
-                        <option value="4/4 Color">4/4 Color</option>
+                        {/* Options */}
                       </select>
                     </div>
 
-                    <div class="inline-block lg:float-end s:float-none">
-                      <h5 class="font-barlow text-[19px]">
-                        <span class="font-semibold">Price:</span> $ 200.00
+                    <div className="inline-block lg:float-end sm:float-none">
+                      <h5 className="font-barlow text-[19px]">
+                        <span className="font-semibold">Price:</span> $ 200.00
                       </h5>
                     </div>
 
-                    <div class="flex items-center s:flex-col s:mt-5">
-                      <button class="relative bg-mainColor px-[20px] py-[8px] text-white font-cairo rounded-[5px] text-[15px] overflow-hidden transition-all duration-300 ease-in-out group w-full">
-                        <span class="absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                        <span class="relative z-10">Add to Cart</span>
+                    <div className="flex items-center sm:flex-col sm:mt-5">
+                      <button type="button" onClick={() => handleAddToCart(product.id)} className="relative bg-mainColor px-[20px] py-[8px] text-white font-cairo rounded-[5px] text-[15px] overflow-hidden transition-all duration-300 ease-in-out group w-full">
+                        <span className="absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform -translate-x-full group-hover:translate-x-0"></span>
+                        <span className="relative z-10">Add to Cart</span>
                       </button>
-                      {/* <!-- <span class="font-barlow mx-[14px] s:my-[8px]">Or</span>
-                 <button class="modal-button relative bg-transparent border border-mainColor text-mainColor px-[20px] py-[7px] font-cairo rounded-[5px] text-[15px] overflow-hidden transition-all duration-300 ease-in-out group w-full">
-                  <span class="absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                  <span class="relative z-10 group-hover:text-white">Customized Product</span>
-                </button> --> */}
                     </div>
                   </form>
+
                   <div class="mt-4 space-x-4 s:space-x-0">
                     <div class="inline-block s:block">
                       <a

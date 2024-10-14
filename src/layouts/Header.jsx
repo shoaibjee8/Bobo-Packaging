@@ -29,52 +29,72 @@ export default function Header({ cartAllProduct }) {
     // Add more users as needed
   ];
 
-  // Filter users based on the search input
-  useEffect(() => {
-    if (searchItem) {
-      const filtered = users.filter((user) =>
-        user.firstName.toLowerCase().includes(searchItem.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers([]);
-    }
-  }, [searchItem, users]);
+// Filter users based on the search input
+useEffect(() => {
+  if (searchItem) {
+    const filtered = users.filter((user) =>
+      user.firstName.toLowerCase().includes(searchItem.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  } else {
+    setFilteredUsers([]);
+  }
+}, [searchItem]); // Removed `users` from dependencies since it doesn’t change
 
   // Handle keyboard navigation
-  useEffect(() => {
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (filteredUsers.length > 0) {
+      if (e.key === 'ArrowDown') {
+        setSelectedIndex((prevIndex) =>
+          prevIndex < filteredUsers.length - 1 ? prevIndex + 1 : 0
+        );
+        e.preventDefault();
+      } else if (e.key === 'ArrowUp') {
+        setSelectedIndex((prevIndex) =>
+          prevIndex > 0 ? prevIndex - 1 : filteredUsers.length - 1
+        );
+        e.preventDefault();
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        // Handle Enter key to navigate to the selected user's link
+        window.location.href = `/${filteredUsers[selectedIndex].id}`;
+        e.preventDefault();
+      }
+    }
+  };
+
+  if (searchItem) {
+    window.addEventListener('keydown', handleKeyDown);
+  }
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [filteredUsers, selectedIndex, searchItem]); // `selectedIndex` should not directly affect other state updates
+
+
+    // Add the keydown event listener
     const handleKeyDown = (e) => {
       if (filteredUsers.length > 0) {
         if (e.key === 'ArrowDown') {
-          // Navigate down the list
-          setSelectedIndex((prevIndex) =>
-            prevIndex < filteredUsers.length - 1 ? prevIndex + 1 : 0
-          );
-          e.preventDefault(); // Prevent default scrolling behavior
+          setSelectedIndex((prevIndex) => {
+            const newIndex = prevIndex < filteredUsers.length - 1 ? prevIndex + 1 : 0;
+            return newIndex !== prevIndex ? newIndex : prevIndex; // Avoid redundant state update
+          });
+          e.preventDefault();
         } else if (e.key === 'ArrowUp') {
-          // Navigate up the list
-          setSelectedIndex((prevIndex) =>
-            prevIndex > 0 ? prevIndex - 1 : filteredUsers.length - 1
-          );
-          e.preventDefault(); // Prevent default scrolling behavior
+          setSelectedIndex((prevIndex) => {
+            const newIndex = prevIndex > 0 ? prevIndex - 1 : filteredUsers.length - 1;
+            return newIndex !== prevIndex ? newIndex : prevIndex; // Avoid redundant state update
+          });
+          e.preventDefault();
         } else if (e.key === 'Enter' && selectedIndex >= 0) {
-          // Handle Enter key to navigate to the selected user's link
           window.location.href = `/${filteredUsers[selectedIndex].id}`;
-          e.preventDefault(); // Prevent form submission if in a form
+          e.preventDefault();
         }
       }
     };
-
-    // Add the keydown event listener
-    if (searchItem) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    // Clean up the event listener on unmount or when searchItem becomes inactive
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [filteredUsers, selectedIndex, searchItem]);
+    
 
     // // State for controlling the sidebar visibility
     //   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

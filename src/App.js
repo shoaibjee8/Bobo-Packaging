@@ -66,7 +66,7 @@ function App() {
           <Route path="/industries" element={<Industry />} />
           <Route path="/appearl-category" element={<ApperalCategory />} />
           <Route path="/appreal-child" element={<ApperalChild setProductId={setProductId} />} />
-          <Route path="/product/:id" element={<Product />} />
+          <Route path="/product/:id" element={<Product setProductId={setProductId} />} />
           <Route path="/all-products" element={<AllProducts />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<Cart cartAllProduct={cartAllProduct} setCartAllProduct={setCartAllProduct} />} />
