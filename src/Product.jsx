@@ -9,61 +9,115 @@ import toast, { Toaster } from "react-hot-toast";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import Error from "./Error";
+import { API_URL } from "./config";
+import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-export default function Product({ setProductId }) {
-  // Initialize states
-  const [product, setProduct] = useState({});
-  const [error, setError] = useState(false);
-  const [mainImage, setMainImage] = useState({ src: "", alt: "" });
-  const location = useLocation();
-  const currentId = location.pathname.split("/")[2];
+export default function Product({ setProductId  }) {
+  const { id: currentId } = useParams(); // Get the ID from the URL
 
-  useEffect(() => {
-    NProgress.start(); // Start loading indicator
+// Initialize states
+const [product, setProduct] = useState({});
+const [relatedProducts, relSetProduct] = useState({});
+const [error, setError] = useState(false);
+const [mainImage, setMainImage] = useState({ src: "", alt: "" });
+const [sizes, setSizes] = useState([]);
+const [prices, setPrices] = useState([]);
+const [selectedSize, setSelectedSize] = useState("");
+const [currentPrice, setCurrentPrice] = useState("0");
 
-    const fetchProduct = async () => {
-      try {
-        const response = await axios.get(
-          `https://dummyjson.com/products/${currentId}`
-        );
-        if (response.status === 200) {
-          setProduct(response.data);
+// This effect will always run, but we can handle errors inside
+useEffect(() => {
+  if (!currentId) {
+    setError(true);
+    return; // Exit if currentId is not available
+  }
 
-          if (response.data.images && response.data.images.length > 0) {
-            setMainImage({
-              src: response.data.images[0],
-              alt: response.data.title || "Product Image",
-            });
-          }
+  NProgress.start(); // Start loading indicator
+
+  const fetchProduct = async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/get-products/${currentId}`
+      );
+
+      console.log(`Fetching URL: ${API_URL}/api/get-products/${currentId}`); // Log the URL
+
+      if (response.status === 200) {
+        const productData = response.data.data.product; // Updated to match new API structure
+        const relProductData = response.data.data.related_products; // Updated to match new API structure
+        setProduct(productData); // Set product to response.data.data.product
+        relSetProduct(relProductData); // Set product to response.data.data.product
+        console.log("Fetched Product Data:", productData); // Log the data object
+        console.log("Relaed Product Data:", relProductData); // Log the data object
+
+        // Set main image
+        if (productData.img1) { // Assuming img1 is the main image
+          setMainImage({
+            src: productData.img1,
+            alt: productData.img1_alt || productData.name || "Product Image",
+          });
         }
-        NProgress.done(); // Finish loading
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError(true);
-        NProgress.done(); // Finish loading even in case of error
+
+        // Parse sizes and prices
+        const parsedSizes = JSON.parse(productData.sizes);
+        const parsedPrices = JSON.parse(productData.prices);
+        setSizes(parsedSizes);
+        setPrices(parsedPrices);
+
+        // Set default selected size and price
+        if (parsedSizes.length > 0) {
+          const firstSize = parsedSizes[0];
+          setSelectedSize(firstSize);
+          setCurrentPrice(parsedPrices[0]); // Set initial price based on the first size
+          
+        }
       }
-    };
-
-    fetchProduct();
-  }, [currentId]);
-
-  // Initialize the Radio size buttons
-
-  const [selectedSize, setSelectedSize] = useState("");
-
-  const handleChange = (value) => {
-    setSelectedSize(value);
+      NProgress.done(); // Finish loading
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setError(true);
+      NProgress.done(); // Finish loading even in case of error
+    }
   };
 
-  const sizes = [
-    "30mL - 400 Count",
-    "60mL - 600 Count",
-    "90mL - 800 Count",
-    "100mL - 800 Count",
-    "120mL - 1000 Count",
-    "140mL - 1200 Count", // example additional sizes
-  ];
+  fetchProduct();
+}, [currentId]); // currentId dependency to refetch if it changes
 
+const handleChange = (value, index) => {
+  setSelectedSize(value);
+  setCurrentPrice(prices[index]); // Update the current price based on size selection
+  console.log(`Selected size: ${value}, Price: ${prices[index]}`);
+};
+const handleAddToCart = (id) => {
+  setProductId({ id, currentPrice }); // Pass both product ID and price
+  console.log(`Product ID: ${id}, Current Price: ${currentPrice}`);
+  toast.success("Product Added Successfully!");
+  // Here, you can also add the product with its ID and price to the cart
+};
+
+// Function to create markup for provided description
+const createMarkup = (desc) => {
+  return { __html: desc };
+};
+
+// Parse spec_title and spec_number
+const specTitles = product.spec_title ? JSON.parse(product.spec_title) : [];
+const specNumbers = product.spec_number ? JSON.parse(product.spec_number) : [];
+
+// Parse dimension data
+const dimensionsTitle = JSON.parse(product.dimension_title || "[]");
+const dimensionsNumber = JSON.parse(product.dimension_number || "[]");
+
+// Ensure the data is available and questions/answers are properly parsed
+const faqs = product
+  ? {
+      questions: JSON.parse(product.questions || "[]"), // Provide a fallback
+      answers: JSON.parse(product.answers || "[]"), // Provide a fallback
+    }
+  : { questions: [], answers: [] };
+
+ 
   // Initialize the Review Form
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -103,95 +157,97 @@ export default function Product({ setProductId }) {
     setMainImage({ src: newSrc, alt: newAlt });
   };
 
-  // Initialize the `.slick-product` slider
-  useEffect(() => {
-    const initSlickProduct = () => {
-      const $productSlider = $(".slick-product");
-      if ($productSlider.length) {
-        $productSlider.slick({
-          slidesToShow: 4,
-          infinite: true,
-          slidesToScroll: 3,
-          dots: true,
-          arrows: false,
-          speed: 1000,
-          responsive: [
-            {
-              breakpoint: 999,
-              settings: {
-                slidesToShow: 2,
+    // Initialize the `.slick-product` slider
+    useEffect(() => {
+      const initSlickProduct = () => {
+        const $productSlider = $(".slick-product");
+        if ($productSlider.length) {
+          $productSlider.slick({
+            slidesToShow: 4,
+            infinite: true,
+            slidesToScroll: 3,
+            dots: true,
+            arrows: false,
+            speed: 1000,
+            responsive: [
+              {
+                breakpoint: 999,
+                settings: {
+                  slidesToShow: 2,
+                },
               },
-            },
-            {
-              breakpoint: 600,
-              settings: {
-                slidesToShow: 1,
+              {
+                breakpoint: 600,
+                settings: {
+                  slidesToShow: 1,
+                },
               },
-            },
-          ],
-        });
-
-        return () => {
-          if ($productSlider.length) {
-            $productSlider.slick("unslick");
-          }
-        };
-      }
-    };
-
-    const cleanupSlickProduct = initSlickProduct();
-
-    return () => {
-      cleanupSlickProduct();
-    };
-  }, []);
-
-  // Initialize the `.slick-reviews` slider
-
-  useEffect(() => {
-    const initSlickProduct = () => {
-      const $productSlider = $(".slick-reviews");
-      if ($productSlider.length) {
-        $productSlider.slick({
-          slidesToShow: 2,
-          infinite: true,
-          slidesToScroll: 1,
-          dots: true,
-          arrows: false,
-          speed: 1000,
-          responsive: [
-            {
-              breakpoint: 999,
-              settings: {
-                slidesToShow: 2,
+            ],
+          });
+  
+          // Return the cleanup function to unslick
+          return () => {
+            if ($productSlider.length) {
+              $productSlider.slick("unslick");
+            }
+          };
+        }
+        // Return a no-op function if the slider is not initialized
+        return () => {};
+      };
+  
+      const cleanupSlickProduct = initSlickProduct();
+  
+      return () => {
+        cleanupSlickProduct();
+      };
+    }, []);
+  
+    // Initialize the `.slick-reviews` slider
+    useEffect(() => {
+      const initSlickReviews = () => {
+        const $reviewsSlider = $(".slick-reviews");
+        if ($reviewsSlider.length) {
+          $reviewsSlider.slick({
+            slidesToShow: 2,
+            infinite: true,
+            slidesToScroll: 1,
+            dots: true,
+            arrows: false,
+            speed: 1000,
+            responsive: [
+              {
+                breakpoint: 999,
+                settings: {
+                  slidesToShow: 2,
+                },
               },
-            },
-            {
-              breakpoint: 600,
-              settings: {
-                slidesToShow: 1,
+              {
+                breakpoint: 600,
+                settings: {
+                  slidesToShow: 1,
+                },
               },
-            },
-          ],
-        });
-
-        // Cleanup function to unslick the slider
-        return () => {
-          if ($productSlider.length) {
-            $productSlider.slick("unslick");
-          }
-        };
-      }
-    };
-
-    // Initialize Slick slider
-    const cleanupSlickProduct = initSlickProduct();
-
-    // Cleanup the slick on component unmount
-    return () => {
-      cleanupSlickProduct();
-    };
-  }, []); // Empty dependency array ensures it only runs once on mount
+            ],
+          });
+  
+          // Return the cleanup function to unslick
+          return () => {
+            if ($reviewsSlider.length) {
+              $reviewsSlider.slick("unslick");
+            }
+          };
+        }
+        // Return a no-op function if the slider is not initialized
+        return () => {};
+      };
+  
+      const cleanupSlickReviews = initSlickReviews();
+  
+      return () => {
+        cleanupSlickReviews();
+      };
+    }, []); // Empty dependency array ensures it only runs once on mount
 
   // This is A Model js
 
@@ -262,10 +318,9 @@ export default function Product({ setProductId }) {
   }, []); // Empty dependency array ensures it only runs on mount
 
 
-  const handleAddToCart = (id) => {
-    setProductId(id);
-    toast.success("Product Added Successfully!");
-  };
+  
+
+  
 
   return (
     <>
@@ -579,7 +634,7 @@ export default function Product({ setProductId }) {
 
                 {/* <!-- Current Page --> */}
                 <li>
-                  <span className="text-[#7EBE43]">Current Page</span>
+                  <span className="text-[#7EBE43]">{product.name}</span>
                 </li>
               </ul>
             </div>
@@ -596,52 +651,37 @@ export default function Product({ setProductId }) {
                         fetchpriority="high"
                         width="110"
                         height="110"
-                        onMouseEnter={() => changeMainImage(product.images)}
-                        src={product.images}
+                        onMouseEnter={() => changeMainImage(product.img1)}
+                        src={`${API_URL}/product-images/${product.img1}`}
                         className="rounded-[5px]"
-                        alt="poly bubble mailers"
+                        alt={product.img1_alt}
                       />
                       <img
                         fetchpriority="high"
                         width="110"
                         height="110"
-                        onMouseEnter={() =>
-                          changeMainImage(
-                            "/product-images/p2.jpg",
-                            "custom poly bubble mailers"
-                          )
-                        }
-                        src="/product-images/p2.jpg"
+                        onMouseEnter={() => changeMainImage(product.img2)}
+                        src={`${API_URL}/product-images/${product.img2}`}
                         className="rounded-[5px]"
-                        alt="custom poly bubble mailers"
+                        alt={product.img2_alt}
                       />
                       <img
                         fetchpriority="high"
                         width="110"
                         height="110"
-                        onMouseEnter={() =>
-                          changeMainImage(
-                            "/product-images/p3.jpg",
-                            "bubble poly mailers"
-                          )
-                        }
-                        src="/product-images/p3.jpg"
+                        onMouseEnter={() => changeMainImage(product.img3)}
+                        src={`${API_URL}/product-images/${product.img3}`}
                         className="rounded-[5px]"
-                        alt="bubble poly mailers"
+                        alt={product.img3_alt}
                       />
                       <img
                         fetchpriority="high"
                         width="110"
                         height="110"
-                        onMouseEnter={() =>
-                          changeMainImage(
-                            "/product-images/p4.jpg",
-                            "poly bubble mailers bulk"
-                          )
-                        }
-                        src="/product-images/p4.jpg"
+                        onMouseEnter={() => changeMainImage(product.img4)}
+                        src={`${API_URL}/product-images/${product.img4}`}
                         className="rounded-[5px]"
-                        alt="poly bubble mailers bulk"
+                        alt={product.img4_alt}
                       />
                     </div>
                   </div>
@@ -649,7 +689,7 @@ export default function Product({ setProductId }) {
                     <div className="big-img relative lg:left-[-20px] md:left-[0px] sl:left-[0px] s:left-[0px]">
                       <img
                         id="mymainImage3"
-                        src={mainImage.src}
+                        src={`${API_URL}/product-images/${mainImage.src}`}
                         alt={mainImage.alt}
                         className="rounded-[5px]"
                         width="500"
@@ -662,25 +702,25 @@ export default function Product({ setProductId }) {
               <div class="col lg:w-[40%] md:w-[40%] sl:w-[40%] s:w-[100%]">
                 <div class="product-des">
                   <h1 class="lg:text-[35px] md:text-[30px] s:text-[25px] font-semibold text-black font-cairo leading-[48px] s:leading-[40px]">
-                    {product.title}
+                    {product.name}
                   </h1>
                   <hr class="my-[7px] border-black" />
                   <h5 class="font-barlow text-[17px] mt-3 inline-block">
-                    $0.19 per unit / $49.00 per case
+                    ${product.perUnit} per unit / ${product.perCase} per case
                   </h5>
                   <p class="inline-block lg:float-end s:float-none mt-3">
-                    <span class="text-mainColor font-semibold">200/</span>Qty
+                    <span class="text-mainColor font-semibold">{product.quantity}/</span>Qty
                   </p>
 
                   <div class="flex justify-between pt-[15px] font-barlow">
                     <p>
-                      <span class="font-semibold">L=</span> 3.4cm
+                      <span class="font-semibold">L=</span> {product.length}cm
                     </p>
                     <p>
-                      <span class="font-semibold">W=</span> 3.4cm
+                      <span class="font-semibold">W=</span> {product.width}cm
                     </p>
                     <p>
-                      <span class="font-semibold">H=</span> 3.4cm
+                      <span class="font-semibold">H=</span> {product.height}cm
                     </p>
                   </div>
 
@@ -691,27 +731,23 @@ export default function Product({ setProductId }) {
                       </h5>
                     </div>
                     <div className="grid lg:grid-cols-3 sm:grid-cols-2 md:grid-cols-2 gap-4" style={{ margin: "0px" }} id="selects">
-                      {sizes.map((size, index) => (
-                        <label
-                          key={index}
-                          className={`relative ${
-                            selectedSize === size ? "bg-mainColor text-white" : "bg-transparent text-mainColor"
-                          } border border-mainColor px-[2px] py-[9px] font-cairo rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group cursor-pointer flex items-center justify-center`}
-                        >
-                          <input
-                            type="radio"
-                            name="size"
-                            className="absolute opacity-0 w-full h-full cursor-pointer"
-                            value={size}
-                            checked={selectedSize === size}
-                            onChange={() => handleChange(size)}
-                          />
-                          <span className={`absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform ${
-                            selectedSize === size ? "translate-x-0" : "-translate-x-full"
-                          } group-hover:translate-x-0`}></span>
-                          <span className="relative z-10 group-hover:text-white text-center">{size}</span>
-                        </label>
-                      ))}
+                    {sizes.map((size, index) => (
+          <label
+            key={index}
+            className={`relative ${selectedSize === size ? "bg-mainColor text-white" : "bg-transparent text-mainColor"} border border-mainColor px-[2px] py-[9px] font-cairo rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group cursor-pointer flex items-center justify-center`}
+          >
+            <input
+              type="radio"
+              name="size"
+              className="absolute opacity-0 w-full h-full cursor-pointer"
+              value={size}
+              checked={selectedSize === size}
+              onChange={() => handleChange(size, index)} // Pass index to handleChange
+            />
+            <span className={`absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform ${selectedSize === size ? "translate-x-0" : "-translate-x-full"} group-hover:translate-x-0`}></span>
+            <span className="relative z-10 group-hover:text-white text-center">{size}</span>
+          </label>
+        ))}
                     </div>
 
                     <div className="inline-block">
@@ -727,9 +763,9 @@ export default function Product({ setProductId }) {
                     </div>
 
                     <div className="inline-block lg:float-end sm:float-none">
-                      <h5 className="font-barlow text-[19px]">
-                        <span className="font-semibold">Price:</span> $ 200.00
-                      </h5>
+                    <h5 className="font-barlow text-[19px]">
+          <span className="font-semibold">Price:</span> ${currentPrice}.00
+        </h5>
                     </div>
 
                     <div className="flex items-center sm:flex-col sm:mt-5">
@@ -829,87 +865,49 @@ export default function Product({ setProductId }) {
                         Specifications
                       </h4>
                       <ul className="space-y-4 list mt-5">
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
+
+              {/* Render product specs */}
+      <ul className="space-y-4 list mt-5">
+        {specTitles.map((title, index) => (
+          <li key={index}>
+            <div className="flex justify-between items-center font-barlow">
+              <h6 className="font-semibold">{title}</h6>
+              <h6 className="text-[#3E3E3E]">{specNumbers[index] || '-'}</h6>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Handle error case */}
+      {error && <div className="text-red-500">Failed to load product details.</div>}
+                       
                       </ul>
                     </div>
                     <div className="col">
                       <img
-                        src="product-images/s-image.png"
+                        src={`${API_URL}/product-images/${product.spec_img}`}
                         className="mx-auto block"
-                        alt="img"
+                        alt={product.spec_img_alt}
                       />
                     </div>
                     <div className="col">
                       <h4 className="font-barlow font-semibold text-[20px]">
                         Dimensions
                       </h4>
-                      <ul className="space-y-4 list mt-5">
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                        <li>
-                          <div className="flex justify-between items-center font-barlow">
-                            <h6 className="font-semibold">Capacity</h6>
-                            <h6 className="text-[#3E3E3E]">28</h6>
-                          </div>
-                        </li>
-                      </ul>
+                        {/* Handle error case */}
+      {error && <div className="text-red-500">Failed to load product details.</div>}
+
+{/* Render dimensions list */}
+<ul className="space-y-4 list mt-5">
+  {dimensionsTitle.map((title, index) => (
+    <li key={index}>
+      <div className="flex justify-between items-center font-barlow">
+        <h6 className="font-semibold">{title}</h6>
+        <h6 className="text-[#3E3E3E]">{dimensionsNumber[index] || "N/A"}</h6>
+      </div>
+    </li>
+  ))}
+</ul>
                     </div>
                   </div>
                 </div>
@@ -928,21 +926,8 @@ export default function Product({ setProductId }) {
                   className="lg:py-[40px] md:py-[40px] s:py-[30px] lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]"
                   style={{ paddingBottom: "0px" }}
                 >
-                  <div className="long-content">
-                    <h3>What is Lorem Ipsum?</h3>
-                    <p>
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the industry's
-                      standard dummy text ever since the 1500s, when an unknown
-                      printer took a galley of type and scrambled it to make a
-                      type specimen book. It has survived not only five
-                      centuries, but also the leap into electronic typesetting,
-                      remaining essentially unchanged. It was popularised in the
-                      1960s with the release of Letraset sheets containing Lorem
-                      Ipsum passages, and more recently with desktop publishing
-                      software like Aldus PageMaker including versions of Lorem
-                      Ipsum.
-                    </p>
+                  <div className="long-content" dangerouslySetInnerHTML={createMarkup(product.short_desc)}>
+                   
                   </div>
                 </div>
               </div>
@@ -1262,58 +1247,8 @@ export default function Product({ setProductId }) {
 
           <section className="bg-[#f5f5f5] lg:py-[50px] md:py-[50px] s:py-[40px]">
             <div className="container lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
-              <div className="long-content">
-                <h2>What is Lorem Ipsum?</h2>
-                <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry. Lorem Ipsum has been the industry's
-                  standard dummy text ever since the 1500s, when an unknown
-                  printer took a galley of type and scrambled it to make a type
-                  specimen book. It has survived not only five centuries, but
-                  also the leap into electronic typesetting, remaining
-                  essentially unchanged. It was popularised in the 1960s with
-                  the release of Letraset sheets containing Lorem Ipsum
-                  passages, and more recently with desktop publishing software
-                  like Aldus PageMaker including versions of Lorem Ipsum.
-                </p>
-                <h3>What is Lorem Ipsum?</h3>
-                <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry. Lorem Ipsum has been the industry's
-                  standard dummy text ever since the 1500s, when an unknown
-                  printer took a galley of type and scrambled it to make a type
-                  specimen book. It has survived not only five centuries, but
-                  also the leap into electronic typesetting, remaining
-                  essentially unchanged. It was popularised in the 1960s with
-                  the release of Letraset sheets containing Lorem Ipsum
-                  passages, and more recently with desktop publishing software
-                  like Aldus PageMaker including versions of Lorem Ipsum.
-                </p>
-                <h4>What is Lorem Ipsum?</h4>
-                <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry. Lorem Ipsum has been the industry's
-                  standard dummy text ever since the 1500s, when an unknown
-                  printer took a galley of type and scrambled it to make a type
-                  specimen book. It has survived not only five centuries, but
-                  also the leap into electronic typesetting, remaining
-                  essentially unchanged. It was popularised in the 1960s with
-                  the release of Letraset sheets containing Lorem Ipsum
-                  passages, and more recently with desktop publishing software
-                  like Aldus PageMaker including versions of Lorem Ipsum.
-                </p>
-                <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry. Lorem Ipsum has been the industry's
-                  standard dummy text ever since the 1500s, when an unknown
-                  printer took a galley of type and scrambled it to make a type
-                  specimen book. It has survived not only five centuries, but
-                  also the leap into electronic typesetting, remaining
-                  essentially unchanged. It was popularised in the 1960s with
-                  the release of Letraset sheets containing Lorem Ipsum
-                  passages, and more recently with desktop publishing software
-                  like Aldus PageMaker including versions of Lorem Ipsum.
-                </p>
+              <div className="long-content" dangerouslySetInnerHTML={createMarkup(product.long_desc)}>
+               
               </div>
             </div>
           </section>
@@ -1324,217 +1259,75 @@ export default function Product({ setProductId }) {
           >
             <div className="row">
               <h2 className="lg:text-[45px] md:text-[38px] s:text-[32px] font-bold font-cairo leading-[45px] s:leading-[35px]">
-                Related <span className="text-mainColor">Products</span>
+              {product.related_heading}
               </h2>
               <p className="font-barlow font-normal py-[18px] leading-[28px]">
-                Looking for custom apparel boxes wholesale to present, promote,
-                and protect your apparel items? Our apparel boxes are one of the
-                most cost-effective, eco-friendly, ideally branded, and
-                appealing packaging solutions. We design each apparel box
-                according to products and market standards.
+              {product.related_description}
               </p>
             </div>
 
-            <div className="slick-product">
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)] group">
-                <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                  <img
-                    src="product-images/product-img.jpg"
-                    className="w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    alt="product"
-                  />
-                </div>
-                <div className="product-des px-[14px] py-[18px]">
-                  <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo mb-[10px] text-black">
-                    Pre-Rolled Cones
-                  </h6>
-                  <div className="flex justify-between pb-[10px] font-barlow">
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                    <p>
-                      <span className="text-mainColor">20.00$/</span>per Unit
-                    </p>
-                  </div>
-                  <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                    <p>H=3.4cm</p>
-                  </div>
-                  <button className="relative bg-transparent border border-mainColor text-mainColor px-[22px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block mx-auto mt-3">
-                    <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                    <span className="relative z-10 group-hover:text-white">
-                      Add to cart
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
+              
+            <div className="related-products">
+      {relatedProducts.length > 0 ? (
+        relatedProducts.map((subPro) => (
+  <div  className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)]">
+    <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
+      <Link to={`/product/${subPro.name}`}>
+        <img
+          src={`${API_URL}/product-images/${subPro.img1}`} // Use dynamic image source
+          className="w-full transition-transform duration-300 ease-in-out hover:scale-110"
+          alt={subPro.img1_alt || "product"} // Use dynamic alt text
+        />
+      </Link>
+    </div>
+    <div className="product-des px-[14px] py-[18px]">
+      <div className="flex justify-between pb-[10px] font-barlow">
+        <Link to={`/product/${subPro.name}`}>
+          <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo text-black">
+            {subPro.name}
+          </h6>
+        </Link>
+        <p>
+          <span className="text-mainColor">
+            {subPro.quantity}
+          </span>
+          /Qty
+        </p>
+      </div>
+      <div className="flex justify-between pb-[10px] font-barlow">
+        <p>
+          <span className="text-mainColor">{subPro.perUnit}</span>{" "}
+          /per Unit
+        </p>
+        <p>
+          <span className="text-mainColor">{subPro.perCase}</span>{" "}
+          /per Case
+        </p>
+      </div>
+      <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
+        <p>L={subPro.length}cm</p>
+        <p>W={subPro.weight}cm</p>
+        <p>H={subPro.height}cm</p>
+      </div>
+      <div className="mt-3">
+        <button className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block">
+          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
+          <span className="relative z-10 group-hover:text-white">
+            Add to cart
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+        ))
+      ) : (
+        <p>No related products available.</p>
+      )}
+    </div>
+             
+             
           </section>
 
           <section className="bg-[url('/home-images/get-in-touch.jpg')] lg:bg-center md:bg-center s:bg-left bg-no-repeat bg-cover lg:h-[480px] md:h-[480px] s:h-[450px] flex items-center">
@@ -1568,268 +1361,71 @@ export default function Product({ setProductId }) {
           >
             <div className="row">
               <h2 className="lg:text-[45px] md:text-[38px] s:text-[32px] font-bold font-cairo leading-[45px] s:leading-[35px]">
-                Frequently Asked{" "}
-                <span className="text-mainColor">Questions</span>
+              {product.faqs_heading}
               </h2>
               <p className="font-barlow font-normal py-[18px] leading-[28px]">
-                Looking for custom apparel boxes wholesale to present, promote,
-                and protect your apparel items? Our apparel boxes are one of the
-                most cost-effective, eco-friendly, ideally branded, and
-                appealing packaging solutions.
+              {product.faqs_description}
               </p>
             </div>
             <div className="row">
               <div>
-                <ul className="grid space-y-3 font-barlow" data-list="faq">
-                  <li
-                    className="group"
-                    itemscope
-                    itemprop="mainEntity"
-                    itemtype="https://schema.org/Question"
-                  >
-                    <input
-                      className="peer/option-1 hidden"
-                      type="radio"
-                      id="option-1"
-                      name="options-1"
-                    />
-                    <label
-                      className="peer-checked/option-1:bg-mainColor peer-checked/option-1:text-white peer-checked/option-1:border-white peer-checked/option-1:rounded-[3px] peer-checked/option-1:[&>svg]:text-white peer-checked/option-1:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
-                      for="option-1"
-                      itemprop="name"
-                    >
-                      What is Tailwind CSS?
-                      <svg
-                        className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
+                {error ? (
+                  <p>Error loading FAQs. Please try again later.</p>
+                ) : (
+                  <ul className="grid space-y-3 font-barlow" data-list="faq">
+                    {faqs.questions.map((question, index) => (
+                      <li
+                        key={index}
+                        className="group"
+                        itemscope
+                        itemprop="mainEntity"
+                        itemtype="https://schema.org/Question"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        ></path>
-                      </svg>
-                    </label>
-                    <div
-                      className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-1:grid-rows-[1fr]"
-                      itemscope
-                      itemprop="acceptedAnswer"
-                    >
-                      <div className="min-h-[0px] overflow-hidden">
-                        <div
-                          className="p-2 border-none rounded"
-                          itemprop="text"
+                        <input
+                          className="peer/option-1 hidden"
+                          type="radio"
+                          id={`option-${index}`}
+                          name="options"
+                        />
+                        <label
+                          className="peer-checked/option-1:bg-mainColor peer-checked/option-1:text-white peer-checked/option-1:border-white peer-checked/option-1:rounded-[3px] peer-checked/option-1:[&>svg]:text-white peer-checked/option-1:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
+                          htmlFor={`option-${index}`}
+                          itemprop="name"
                         >
-                          Tailwind CSS is a utility-first CSS framework for
-                          creating custom designs quickly and efficiently.
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                  <li
-                    className="group"
-                    itemscope
-                    itemprop="mainEntity"
-                    itemtype="https://schema.org/Question"
-                  >
-                    <input
-                      className="peer/option-2 hidden"
-                      type="radio"
-                      id="option-2"
-                      name="options-1"
-                    />
-                    <label
-                      className="peer-checked/option-2:bg-mainColor peer-checked/option-2:text-white peer-checked/option-2:border-white peer-checked/option-2:rounded-[3px] peer-checked/option-2:[&>svg]:text-white peer-checked/option-2:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
-                      for="option-2"
-                      itemprop="name"
-                    >
-                      What is Tailwind CSS used for?
-                      <svg
-                        className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        ></path>
-                      </svg>
-                    </label>
-                    <div
-                      className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-2:grid-rows-[1fr]"
-                      itemscope
-                      itemprop="acceptedAnswer"
-                    >
-                      <div className="min-h-[0px] overflow-hidden">
+                          {question}
+                          <svg
+                            className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            ></path>
+                          </svg>
+                        </label>
                         <div
-                          className="p-2 border-none rounded"
-                          itemprop="text"
+                          className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-1:grid-rows-[1fr]"
+                          itemscope
+                          itemprop="acceptedAnswer"
                         >
-                          Tailwind CSS is primarily used for rapidly building
-                          custom UI designs without having to write custom CSS.
+                          <div className="min-h-[0px] overflow-hidden">
+                            <div
+                              className="p-2 border-none rounded"
+                              itemprop="text"
+                            >
+                              {faqs.answers[index]}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </li>
-                  <li
-                    className="group"
-                    itemscope
-                    itemprop="mainEntity"
-                    itemtype="https://schema.org/Question"
-                  >
-                    <input
-                      className="peer/option-3 hidden"
-                      type="radio"
-                      id="option-3"
-                      name="options-1"
-                    />
-                    <label
-                      className="peer-checked/option-3:bg-mainColor peer-checked/option-3:text-white peer-checked/option-3:border-white peer-checked/option-3:rounded-[3px] peer-checked/option-3:[&>svg]:text-white peer-checked/option-3:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
-                      for="option-3"
-                      itemprop="name"
-                    >
-                      What are the benefits of Tailwind CSS?
-                      <svg
-                        className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        ></path>
-                      </svg>
-                    </label>
-                    <div
-                      className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-3:grid-rows-[1fr]"
-                      itemscope
-                      itemprop="acceptedAnswer"
-                    >
-                      <div className="min-h-[0px] overflow-hidden">
-                        <div
-                          className="p-2 border-none rounded"
-                          itemprop="text"
-                        >
-                          The benefits of Tailwind CSS include rapid
-                          prototyping, reusability, and a low learning curve for
-                          beginners.
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                  <li
-                    className="group"
-                    itemscope
-                    itemprop="mainEntity"
-                    itemtype="https://schema.org/Question"
-                  >
-                    <input
-                      className="peer/option-4 hidden"
-                      type="radio"
-                      id="option-4"
-                      name="options-1"
-                    />
-                    <label
-                      className="peer-checked/option-4:bg-mainColor peer-checked/option-4:text-white peer-checked/option-4:border-white peer-checked/option-4:rounded-[3px] peer-checked/option-4:[&>svg]:text-white peer-checked/option-4:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
-                      for="option-4"
-                      itemprop="name"
-                    >
-                      What are the benefits of Tailwind CSS?
-                      <svg
-                        className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        ></path>
-                      </svg>
-                    </label>
-                    <div
-                      className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-4:grid-rows-[1fr]"
-                      itemscope
-                      itemprop="acceptedAnswer"
-                    >
-                      <div className="min-h-[0px] overflow-hidden">
-                        <div
-                          className="p-2 border-none rounded"
-                          itemprop="text"
-                        >
-                          The benefits of Tailwind CSS include rapid
-                          prototyping, reusability, and a low learning curve for
-                          beginners.
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                  <li
-                    className="group"
-                    itemscope
-                    itemprop="mainEntity"
-                    itemtype="https://schema.org/Question"
-                  >
-                    <input
-                      className="peer/option-5 hidden"
-                      type="radio"
-                      id="option-5"
-                      name="options-1"
-                    />
-                    <label
-                      className="peer-checked/option-5:bg-mainColor peer-checked/option-5:text-white peer-checked/option-5:border-white peer-checked/option-5:rounded-[3px] peer-checked/option-5:[&>svg]:text-white peer-checked/option-5:[&>svg]:rotate-180 block cursor-pointer p-2 pr-12 font-semibold border-b border-slate-900 transition-all duration-150 ease-in-out relative rounded-none text-gray-900"
-                      for="option-5"
-                      itemprop="name"
-                    >
-                      What are the benefits of Tailwind CSS?
-                      <svg
-                        className="w-6 h-6 text-gray-600 absolute top-1/2 right-4 transform -translate-y-1/2 transition-transform duration-300 faq-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        ></path>
-                      </svg>
-                    </label>
-                    <div
-                      className="grid grid-rows-[0fr] transition-all duration-150 ease-in-out peer-checked/option-5:grid-rows-[1fr]"
-                      itemscope
-                      itemprop="acceptedAnswer"
-                    >
-                      <div className="min-h-[0px] overflow-hidden">
-                        <div
-                          className="p-2 border-none rounded"
-                          itemprop="text"
-                        >
-                          The benefits of Tailwind CSS include rapid
-                          prototyping, reusability, and a low learning curve for
-                          beginners.
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </section>

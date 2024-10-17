@@ -1,7 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
+import { API_URL } from "../config";
+import axios from "axios";
 
 export default function Header({ cartAllProduct }) {
+
+  const [categories, setCategories] = useState([]); // State for categories
+
+  useEffect(() => {
+
+    // Fetch categories from the API
+    axios
+      .get(`${API_URL}/api/get-categories`)
+      .then((response) => {
+        setCategories(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching category data", error);
+      });
+
+  }, []);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
 
@@ -125,18 +144,17 @@ useEffect(() => {
                   <ul className="hidden md:flex space-x-6 z-10 font-barlow">
                     <li className="flex items-center relative group">
                       <i className="fa-solid fa-list-ul text-white"></i>
-                      <a href="industry.php" className="ml-2 text-white font-[500]">All Industry</a>
+                      <NavLink to={'/industries'} className="ml-2 text-white font-[500]">All Industry</NavLink>
                       {/* Submenu */}
                       <ul className="absolute bg-white py-1 w-52 top-8 transform scale-0 group-hover:scale-100 transition duration-150 ease-in-out origin-top shadow-md">
-                        <li className="text-sm leading-8 transition-colors duration-150 ease-in-out hover:bg-mainColor hover:text-white px-3">
-                          <a href="#">Webdesign</a>
-                        </li>
-                        <li className="text-sm leading-8 transition-colors duration-150 ease-in-out hover:bg-mainColor hover:text-white px-3">
-                          <a href="#">Appdesign</a>
-                        </li>
-                        <li className="text-sm leading-8 transition-colors duration-150 ease-in-out hover:bg-mainColor hover:text-white px-3">
-                          <a href="#">Webdesign</a>
-                        </li>
+                      {categories.map((category) => (
+                            <li
+                              key={category.id}
+                              className="text-sm leading-8 transition-colors duration-150 ease-in-out hover:bg-mainColor hover:text-white px-3"
+                            >
+                              <Link to={`/industries/${category.url}`}>{category.name}</Link>
+                            </li>
+                          ))}
                         {/* More submenu items */}
                       </ul>
                     </li>

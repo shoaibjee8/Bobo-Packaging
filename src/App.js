@@ -17,30 +17,34 @@ import Blog from "./Blog";
 import SingleBlog from "./SingleBlog";
 import Cart from "./Cart";
 import axios from 'axios';
+import { API_URL } from "./config";
 
 function App() {
-  const [finalProducts, setFinalProducts] = useState([]);
+  const [finalProducts, setFinalProducts] = useState([]); // Ensure it's initialized as an empty array
   const [productId, setProductId] = useState('');
   const [cartAllProduct, setCartAllProduct] = useState(() => {
-    // Load cart data from localStorage
     const savedCart = localStorage.getItem('cart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
-  const getProducts = () => {
-    axios
-      .get('https://dummyjson.com/products')
-      .then((proRes) => proRes.data)
-      .then((finalRes) => {
-        setFinalProducts(finalRes.products);
-      });
+  const getProducts = async () => {
+    try {
+      const proRes = await axios.get(`${API_URL}/api/get-products`);
+      if (Array.isArray(proRes.data)) { // Check if response is an array
+        setFinalProducts(proRes.data);
+        console.log(proRes.data);
+      } else {
+        console.error('Expected an array but received:', proRes.data);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
   };
 
   useEffect(() => {
     getProducts();
   }, []);
 
-  // Sync cart data with localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartAllProduct));
   }, [cartAllProduct]);
@@ -48,11 +52,12 @@ function App() {
   useEffect(() => {
     if (productId) {
       const filteredObject = finalProducts.find(
-        (product) => product.id === parseInt(productId)
+        (product) => product.id === parseInt(productId.id)
       );
-
+  
       if (filteredObject && !cartAllProduct.some(product => product.id === filteredObject.id)) {
-        setCartAllProduct((prevCart) => [...prevCart, filteredObject]);
+        const productWithPrice = { ...filteredObject, price: parseFloat(productId.currentPrice) };
+        setCartAllProduct((prevCart) => [...prevCart, productWithPrice]);
       }
     }
   }, [productId, finalProducts]);
@@ -64,8 +69,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/industries" element={<Industry />} />
-          <Route path="/appearl-category" element={<ApperalCategory />} />
-          <Route path="/appreal-child" element={<ApperalChild setProductId={setProductId} />} />
+          <Route path="/industries/:id" element={<ApperalCategory />} />
+          <Route path="/shop/:id" element={<ApperalChild setProductId={setProductId} />} />
           <Route path="/product/:id" element={<Product setProductId={setProductId} />} />
           <Route path="/all-products" element={<AllProducts />} />
           <Route path="/shop" element={<Shop />} />

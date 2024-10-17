@@ -1,7 +1,41 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from "react";
+import axios from "axios";
+import NProgress from "nprogress"; // Import NProgress
+import "nprogress/nprogress.css"; // Import NProgress CSS
+import { API_URL } from "./config";
+import { Link } from "react-router-dom";
+
 
 export default function Industry() {
+
+
+  const [categories, setCategories] = useState([]); // State for categories
+  const [cateError, setCategoriesError] = useState(false); // State to handle errors
+
+  useEffect(() => {
+    // Start NProgress when the request is initiated
+    NProgress.start();
+
+    // Fetch categories from the API
+    axios
+      .get(`${API_URL}/api/get-categories`)
+      .then((response) => {
+        setCategories(response.data);
+        NProgress.done(); // Stop NProgress once data is fetched
+      })
+      .catch((error) => {
+        console.error("Error fetching category data", error);
+        setCategoriesError(true); // Handle error
+        NProgress.done(); // Stop NProgress on error
+      });
+
+    // Optional: Clean up if needed
+    return () => {
+      NProgress.done(); // Ensure NProgress is done when component is unmounted
+    };
+  }, []);
+
+  
   return (
     <>
     <section className="bg-[rgb(192,228,158,0.28)] py-2">
@@ -46,163 +80,29 @@ export default function Industry() {
     </section>
 
     <section className="container grid lg:grid-cols-5 md:grid-cols-4 s:grid-cols-2 gap-5 lg:py-[50px] md:py-[40px] s:py-[30px] lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
-      <div className="col">
-        <Link to='/appearl-category'>
-          <div className="relative overflow-hidden group rounded-[5px]">
-            <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-            <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-              Apperal
-            </h3>
-          </div>
-          </Link>
-      </div>
-      <div className="col">
-        <a href="appearl-category.php">
-          <div className="relative overflow-hidden group rounded-[5px]">
-            <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-            <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-              Mylar
-            </h3>
-          </div>
-        </a>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Flower
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Flower
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Flower
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Apperal
-          </h3>
-        </div>
-      </div>
-      <div className="col">
-        <div className="relative overflow-hidden group rounded-[5px]">
-          <img src="category-images/cate.jpg" className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110" alt="category-images" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
-          <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
-            Mylar
-          </h3>
-        </div>
-      </div>
+    {cateError ? (
+              <p>Error loading categories. Please try again later.</p>
+            ) : (
+              categories.map((category) => (
+                <div className="col" key={category.id}>
+                  <Link to={`/industries/${category.url}`}>
+                    {" "}
+                    {/* Use dynamic slug */}
+                    <div className="relative overflow-hidden group rounded-[5px]">
+                      <img
+                        src={`${API_URL}/category/${category.sub_img}`} // Use dynamic image source
+                        className="rounded-[5px] w-full transition-transform duration-300 ease-in-out group-hover:scale-110"
+                        alt={category.sub_alt} // Use dynamic alt text
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-[5px] transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
+                      <h3 className="font-barlow lg:text-[18px] absolute bottom-4 left-4 text-white transition-transform duration-300 ease-in-out group-hover:font-bold group-hover:translate-y-[-1px]">
+                        {category.name} {/* Use dynamic category name */}
+                      </h3>
+                    </div>
+                  </Link>
+                </div>
+              ))
+            )}
     </section>
     </>
   )

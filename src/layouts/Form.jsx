@@ -3,7 +3,7 @@ import React from 'react'
 export default function Form() {
   return (
     <>
-    <section className="bg-[url('home-images/form-bg.jpg')] bg-center bg-no-repeat bg-cover lg:py-[70px] md:py-[50px] s:py-[40px]">
+    <section className="bg-[url('/home-images/form-bg.jpg')] bg-center bg-no-repeat bg-cover lg:py-[70px] md:py-[50px] s:py-[40px]">
       <div className="container flex items-center s:flex-col lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
         <div className="col w-[50%] md:w-[50%] s:w-[100%]">
           <h2 className="lg:text-[45px] md:text-[38px] s:text-[32px] font-bold font-cairo leading-[45px] s:leading-[35px] text-white">Lets Talk About <span className="text-mainColor">Your Project.</span></h2>

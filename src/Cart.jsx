@@ -1,9 +1,11 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react"; 
 import toast, { Toaster } from "react-hot-toast";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css"; // Import the NProgress default styles
+import { API_URL } from "./config";
 
 export default function Cart({ cartAllProduct, setCartAllProduct }) {
+  console.log(cartAllProduct);
   const [loading, setLoading] = useState(true);
   window.scrollTo(0, 0);
   useEffect(() => {
@@ -19,7 +21,10 @@ export default function Cart({ cartAllProduct, setCartAllProduct }) {
   }, []);
 
   const totalPrice = useMemo(() => {
-    return cartAllProduct.reduce((acc, product) => acc + product.price, 0);
+    return cartAllProduct.reduce((acc, product) => {
+      const price = product.price || 0; // Default to 0 if price is undefined
+      return acc + price;
+    }, 0);
   }, [cartAllProduct]);
 
   const handleDeleteItem = (id) => {
@@ -30,9 +35,7 @@ export default function Cart({ cartAllProduct, setCartAllProduct }) {
 
   return (
     <>
-    {/* Optionally, you can display a loading indicator if needed */}
-    {loading && <p className='hidden'>Loading...</p>}
-
+      {loading && <p className='hidden'>Loading...</p>}
       <Toaster />
       <section className="container lg:py-[50px] md:py-[40px] s:py-[30px] lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
         <div className="row flex items-center gap-5 s:flex-col lg:px-[0rem] s:px-[0rem] md:px-[2rem] sl:px-[2rem]">
@@ -69,15 +72,17 @@ export default function Cart({ cartAllProduct, setCartAllProduct }) {
                         >
                           <td className="py-3 px-6 flex items-center">
                             <img
-                              src={product.images}
+                              src={`${API_URL}/product-images/${product.img1}`}
                               className="w-[100px] rounded-[5px] border border-mainColor"
-                              alt={product.title}
+                              alt={product.img1_alt}
                             />
                           </td>
-                          <td className="py-2 px-4">{product.title}</td>
+                          <td className="py-2 px-4">{product.name}</td>
                           <td className="py-2 px-4">
-                            ${product.price.toFixed(2)}
-                          </td>
+  {product.price !== undefined && !isNaN(product.price) 
+    ? `$${parseFloat(product.price).toFixed(2)}` 
+    : 'N/A'}
+</td>
                           <td className="py-2 px-4">
                             <i
                               onClick={() => handleDeleteItem(product.id)}
@@ -109,7 +114,6 @@ export default function Cart({ cartAllProduct, setCartAllProduct }) {
                 </h6>
               </div>
 
-              {/* Conditionally show Checkout Button if totalPrice is greater than 0 */}
               {totalPrice > 0 && (
                 <button className="relative bg-mainColor px-[22px] py-[10px] text-white font-barlow rounded-[5px] text-[17px] overflow-hidden transition-all duration-300 ease-in-out group s:hidden md:ml-auto lg:ml-[0px] lg:mr-[0px] md:mr-[30px] w-full">
                   <span className="absolute inset-0 bg-[#659b33] transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
