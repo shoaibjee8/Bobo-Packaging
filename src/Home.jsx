@@ -9,11 +9,16 @@ import axios from "axios";
 import NProgress from "nprogress"; // Import NProgress
 import "nprogress/nprogress.css"; // Import NProgress CSS
 import { API_URL } from "./config";
+import toast, { Toaster } from "react-hot-toast";
+import Model from "./layouts/Model";
 
-export default function Home() {
+
+export default function Home({ setProductId  }) {
+
   const [data, setData] = useState(null);
   const [error, setError] = useState(false); // State to handle errors
 
+  // Fetch home page data
   useEffect(() => {
     NProgress.start(); // Start the progress bar
 
@@ -21,6 +26,13 @@ export default function Home() {
       .get(`${API_URL}/api/get-home-page`)
       .then((response) => {
         setData(response.data); // Set the response data
+
+        // Set currentPrice to the first element of prices array if available
+        const pricesArray = JSON.parse(response.data.prices || "[]"); // Parse prices
+        if (pricesArray.length > 0) {
+          setCurrentPrice(pricesArray[0]); // Set currentPrice to the first price
+        }
+
         NProgress.done(); // Stop the progress bar when data is fetched
       })
       .catch((error) => {
@@ -30,8 +42,9 @@ export default function Home() {
       });
   }, []);
 
+  // Create markup for long description
   function createMarkup(e) {
-    return { __html: data.long_desc };
+    return { __html: data?.long_desc || '' }; // Ensure data is available
   }
 
   // Ensure the data is available and questions/answers are properly parsed
@@ -42,15 +55,15 @@ export default function Home() {
       }
     : { questions: [], answers: [] };
 
+  // Fetch categories from the API
   const [categories, setCategories] = useState([]); // State for categories
   const [cateError, setCategoriesError] = useState(false); // State to handle errors
 
   useEffect(() => {
-    // Fetch categories from the API
     axios
       .get(`${API_URL}/api/get-categories`)
       .then((response) => {
-        setCategories(response.data);
+        setCategories(response.data); // Set categories data
       })
       .catch((error) => {
         console.error("Error fetching category data", error);
@@ -58,23 +71,33 @@ export default function Home() {
       });
   }, []);
 
+  // Fetch products and manage state
   const [proData, setProData] = useState([]); // Start with an empty array
   const [bestSellingProducts, setBestSellingProducts] = useState([]); // State for best-selling products
   const [proError, proSetError] = useState(false); // State to handle errors
+  const [currentPrice, setCurrentPrice] = useState(''); // State for current price
+
 
   useEffect(() => {
     axios
-      .get("https://live.bobopackaging.com/api/get-products")
+      .get(`${API_URL}/api/get-products`)
       .then((response) => {
-        // Sort the products by created_at date in descending order
+        // Assuming products have a prices property
         const sortedProducts = response.data.sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         );
-
-        // Slice the first 8 products
-        const latestProducts = sortedProducts.slice(0, 8);
-        setProData(latestProducts); // Set the latest products data
-
+  
+        // Set the products data
+        setProData(sortedProducts);
+  
+        // Check if the first product has a prices array and update currentPrice
+        if (sortedProducts.length > 0 && sortedProducts[0].prices) {
+          const pricesArray = JSON.parse(sortedProducts[0].prices); // Parse the prices of the first product
+          if (pricesArray.length > 0) {
+            setCurrentPrice(pricesArray[0]); // Set currentPrice to the first price
+          }
+        }
+  
         // Filter best-selling products
         const filteredBestSellers = sortedProducts.filter(
           (product) => product.best_selling === 1
@@ -87,52 +110,131 @@ export default function Home() {
       });
   }, []);
 
-  // Initialize the slick product slider
-  useEffect(() => {
-    const $productSlider = $(".slick-product");
+  // Handle adding to cart
+  const handleAddToCart = (id) => {
+    setProductId({ id, currentPrice }); // Pass both product ID and price
+    toast.success("Product Added Successfully!");
+    // Here, you can also add the product with its ID and price to the cart
+  };
 
-    const initSlickProduct = () => {
-      if ($productSlider.length) {
-        $productSlider.slick({
-          slidesToShow: 4,
-          infinite: true,
-          slidesToScroll: 3,
-          dots: true,
-          arrows: false,
-          speed: 1000,
-          responsive: [
-            {
-              breakpoint: 999,
-              settings: {
-                slidesToShow: 2,
-              },
-            },
-            {
-              breakpoint: 600,
-              settings: {
-                slidesToShow: 1,
-              },
-            },
-          ],
-        });
-      }
-    };
 
-    // Initialize the slider
+ // Initialize the slick product slider
+ useEffect(() => {
+  const $productSlider = $(".slick-product");
+
+  const initSlickProduct = () => {
+    if ($productSlider.length && bestSellingProducts.length > 0) {
+      $productSlider.slick({
+        slidesToShow: 4,
+        infinite: true,
+        slidesToScroll: 3,
+        dots: true,
+        arrows: false,
+        speed: 1000,
+        responsive: [
+          {
+            breakpoint: 999,
+            settings: {
+              slidesToShow: 2,
+            },
+          },
+          {
+            breakpoint: 600,
+            settings: {
+              slidesToShow: 1,
+            },
+          },
+        ],
+      });
+    }
+  };
+
+  // Initialize the slider only when bestSellingProducts has data
+  if (bestSellingProducts.length > 0) {
     initSlickProduct();
+  }
 
-    // Cleanup function
-    return () => {
-      if ($productSlider.length) {
-        $productSlider.slick("unslick"); // Uninitialize the slick slider
-      }
-    };
-  }, []); // Empty dependency array means this runs on mount and unmount
+  // Cleanup function
+  return () => {
+    if ($productSlider.length) {
+      $productSlider.slick("unslick"); // Uninitialize the slick slider
+    }
+  };
+}, [bestSellingProducts]); // Re-run the effect when bestSellingProducts changes
+
+ // Initialize the slick product slider
+ useEffect(() => {
+  const $productSlider = $(".slick-product2");
+
+  const initSlickProduct = () => {
+    if ($productSlider.length && proData.length > 0) {
+      $productSlider.slick({
+        slidesToShow: 4,
+        infinite: true,
+        slidesToScroll: 3,
+        dots: true,
+        arrows: false,
+        speed: 1000,
+        responsive: [
+          {
+            breakpoint: 999,
+            settings: {
+              slidesToShow: 2,
+            },
+          },
+          {
+            breakpoint: 600,
+            settings: {
+              slidesToShow: 1,
+            },
+          },
+        ],
+      });
+    }
+  };
+
+  // Initialize the slider only when proData has data
+  if (proData.length > 0) {
+    initSlickProduct();
+  }
+
+  // Cleanup function
+  return () => {
+    if ($productSlider.length) {
+      $productSlider.slick("unslick"); // Uninitialize the slick slider
+    }
+  };
+}, [proData]); // Re-run the effect when proData changes
+
+// MOdel
+
+const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
+
+// Function to open the modal
+const openModal = () => {
+  setIsModalOpen(true);
+};
+
+// Function to close the modal
+const closeModal = () => {
+  setIsModalOpen(false);
+};
 
   return (
     <>
       {data ? (
         <>
+
+<Toaster />
+
+
+<Model isOpen={isModalOpen} closeModal={closeModal} /> {/* Pass isOpen and closeModal to Model */}
+  
+
+
+
+
+
           <section className="bg-[url('home-images/main-banner.jpg')] bg-center bg-no-repeat bg-cover lg:py-[70px] md:py-[50px] s:py-[40px]">
             <div className="container mx-auto grid lg:grid-cols-2 s:grid-cols-1 lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
               <div className="col">
@@ -262,12 +364,24 @@ export default function Home() {
                         <p>H={product.height}cm</p>
                       </div>
                       <div className="mt-3">
-                        <button className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block">
-                          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                          <span className="relative z-10 group-hover:text-white">
-                            Add to cart
-                          </span>
-                        </button>
+                      {bestSellingProducts.customizebtn === 0 ? (
+        <button onClick={() => handleAddToCart(proData.id)} className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block">
+          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
+          <span className="relative z-10 group-hover:text-white">
+            Add to cart
+          </span>
+        </button>
+      ) : (
+        <button 
+          className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block" 
+          onClick={openModal}  // Open modal on click
+        >
+          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
+          <span className="relative z-10 group-hover:text-white">
+            Customized
+          </span>
+        </button>
+      )}
                       </div>
                     </div>
                   </div>
@@ -391,69 +505,85 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="slick-product">
-              {proError ? (
-                <p>Error loading products. Please try again later.</p>
-              ) : (
-                proData.map((proData, index) => (
-                  <div
-                    key={proData.id} // Use a unique identifier from your product data
-                    className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)]"
-                  >
-                    <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
-                      <Link to={`/product/${proData.name}`}>
-                        <img
-                          src={`${API_URL}/product-images/${proData.img1}`} // Use dynamic image source
-                          className="w-full transition-transform duration-300 ease-in-out hover:scale-110"
-                          alt={proData.img1_alt || "product"} // Use dynamic alt text
-                        />
-                      </Link>
-                    </div>
-                    <div className="product-des px-[14px] py-[18px]">
-                      <div className="flex justify-between pb-[10px] font-barlow">
-                        <Link to={`/product/${proData.name}`}>
-                          <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo text-black">
-                            {proData.name}
-                          </h6>
-                        </Link>
-                        <p>
-                          <span className="text-mainColor">
-                            {proData.quantity}
-                          </span>
-                          /Qty
-                        </p>
-                      </div>
-                      <div className="flex justify-between pb-[10px] font-barlow">
-                        <p>
-                          <span className="text-mainColor">
-                            {proData.perUnit}
-                          </span>{" "}
-                          /per Unit
-                        </p>
-                        <p>
-                          <span className="text-mainColor">
-                            {proData.perCase}
-                          </span>{" "}
-                          /per Case
-                        </p>
-                      </div>
-                      <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
-                        <p>L={proData.length}cm</p>
-                        <p>W={proData.weight}cm</p>
-                        <p>H={proData.height}cm</p>
-                      </div>
-                      <div className="mt-3">
-                        <button className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block">
-                          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
-                          <span className="relative z-10 group-hover:text-white">
-                            Add to cart
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="slick-product2">
+            {proError ? (
+  <p>Error loading products. Please try again later.</p>
+) : (
+  proData.map((proData, index) => (
+    <div
+  key={proData.id} // Use a unique identifier from your product data
+  className="product-info mb-1 bg-[#f5f5f5] rounded-[5px] shadow-[0_-2px_5px_0_rgb(0_0_0/_0%),_0_2px_5px_0_rgb(0_0_0/_15%)]"
+>
+  <div className="overflow-hidden rounded-tl-[5px] rounded-tr-[5px]">
+    <Link to={`/product/${proData.name}`}>
+      <img
+        src={`${API_URL}/product-images/${proData.img1}`} // Use dynamic image source
+        className="w-full transition-transform duration-300 ease-in-out hover:scale-110"
+        alt={proData.img1_alt || "product"} // Use dynamic alt text
+      />
+    </Link>
+  </div>
+  <div className="product-des px-[14px] py-[18px]">
+    <div className="flex justify-between pb-[10px] font-barlow">
+      <Link to={`/product/${proData.name}`}>
+        <h6 className="lg:text-[18px] md:text-[17px] s:text-[16px] font-normal font-cairo text-black">
+          {proData.name}
+        </h6>
+      </Link>
+      <p>
+        <span className="text-mainColor">
+          {proData.quantity}
+        </span>
+        /Qty
+      </p>
+    </div>
+    <div className="flex justify-between pb-[10px] font-barlow">
+      <p>
+        <span className="text-mainColor">
+          {proData.perUnit}
+        </span>{" "}
+        /per Unit
+      </p>
+      <p>
+        <span className="text-mainColor">
+          {proData.perCase}
+        </span>{" "}
+        /per Case
+      </p>
+    </div>
+    <div className="flex justify-between border-t border-[#ccc] pt-[10px] font-barlow">
+      <p>L={proData.length}cm</p>
+      <p>W={proData.weight}cm</p>
+      <p>H={proData.height}cm</p>
+    </div>
+    <div className="mt-3">
+    
+      {proData.customizebtn === 0 ? (
+        <button onClick={() => handleAddToCart(proData.id)} className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block">
+          <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
+          <span className="relative z-10 group-hover:text-white">
+            Add to cart
+          </span>
+        </button>
+      ) : (
+        <button 
+        className="mx-auto relative bg-transparent border border-mainColor text-mainColor px-[16px] py-[7px] font-barlow rounded-[5px] text-[14px] overflow-hidden transition-all duration-300 ease-in-out group block" 
+        onClick={openModal} // Open modal on click
+      >
+        <span className="absolute inset-0 bg-mainColor transition-all duration-300 ease-in-out transform translate-x-[-100%] group-hover:translate-x-0"></span>
+        <span className="relative z-10 group-hover:text-white">
+          Customized
+        </span>
+      </button>
+      )}
+    </div>
+  </div>
+</div>
+
+  
+  ))
+)}
+
             </div>
           </section>
 

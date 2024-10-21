@@ -1,6 +1,34 @@
-import React from 'react'
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css'; // Import NProgress styles
+import React, { useEffect } from 'react';
+import { useContact } from './ContactContext'; // Adjust the path according to your project structure
+import { Link } from 'react-router-dom';
+import { API_URL } from "./config";
+
 
 export default function Contact() {
+
+  const { contactData, loading, error } = useContact();
+
+  useEffect(() => {
+    if (loading) {
+      NProgress.start(); // Start NProgress on loading
+    } else {
+      NProgress.done(); // Stop NProgress when loading is complete
+    }
+  }, [loading]);
+
+  if (loading) {
+    return <div className='hidden'>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error fetching contact data: {error.message}</div>;
+  }
+
+  if (!contactData) {
+    return <div>No contact data available.</div>; // Handle case where contactData is null
+  }
   return (
     <>
     <section className="bg-[rgb(192,228,158,0.28)] py-2">
@@ -8,9 +36,9 @@ export default function Contact() {
         <ul className="flex items-center space-x-2 font-barlow font-[500] text-white text-[14px]">
           {/* <!-- Home Icon --> */}
           <li>
-            <a href="#" className="hover:text-[#000] text-[#7EBE43] transition-colors duration-300 flex items-center">
+            <Link to={"/"} className="hover:text-[#000] text-[#7EBE43] transition-colors duration-300 flex items-center">
               <i className="fa-solid fa-house"></i>
-            </a>
+            </Link>
           </li>
 
           {/* <!-- Separator --> */}
@@ -22,21 +50,27 @@ export default function Contact() {
 
           {/* <!-- Current Page --> */}
           <li>
-            <span className="text-[#7EBE43]">Shop Page</span>
+            <span className="text-[#7EBE43]">Contact Us</span>
           </li>
         </ul>
       </div>
     </section>
 
-    <section className="bg-[url('home-images/contact-bg.jpg')] bg-center bg-no-repeat bg-cover lg:py-[70px] md:py-[50px] s:py-[40px] ">
+    <section style={{
+              backgroundImage: `url(${API_URL}/home-images/${contactData.banner_img})`,
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "cover",
+            }}
+             className="lg:py-[70px] md:py-[50px] s:py-[40px] ">
       <div className="container mx-auto grid lg:grid-cols-2 s:grid-cols-1 lg:px-[0rem] s:px-[2rem] md:px-[2rem] sl:px-[2rem]">
         <div className="col">
           <div className="bg-[#000] bg-opacity-[0.5] lg:px-9 lg:py-6 md:p-6 s:p-5 rounded-[10px] lg:w-[500px] md:w-[450px]">
             <h1 className="lg:text-[42px] md:text-[38px] s:text-[30px] font-bold text-white font-cairo leading-[56px] s:leading-[40px]">
-              Request A Custom Quote
+            {contactData.banner_heading}
             </h1>
             <p className="font-barlow font-normal pt-[10px] text-white leading-[30px]">
-              Make your concentrates stand out with our concentrate packaging. Available in a multitude of styles and sizes, these packaging.
+            {contactData.banner_desc}
             </p>
           </div>
         </div>
@@ -53,21 +87,27 @@ export default function Contact() {
               <i className="fa-solid fa-phone text-mainColor mt-3 text-[18px]"></i>
               <div className="ml-4">
                 <h6 className="font-barlow font-semibold text-[24px]">Phone</h6>
-                <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">408-622-0080</p>
+                <Link to={`tel:${contactData.phone}`}>
+                <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">{contactData.phone}</p>
+                </Link>
               </div>
             </div>
             <div className="flex group py-[10px]">
               <i className="fa-solid fa-envelope text-mainColor mt-2 text-[18px]"></i>
               <div className="ml-4">
                 <h6 className="font-barlow font-semibold text-[24px]">Email</h6>
-                <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">email@email.com</p>
+                <Link to={`mailto:${contactData.email}`}>
+                  <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">
+                    {contactData.email}
+                  </p>
+                </Link>
               </div>
             </div>
             <div className="flex group py-[10px]">
               <i className="fa-solid fa-location-dot text-mainColor mt-2 text-[18px]"></i>
               <div className="ml-4">
                 <h6 className="font-barlow font-semibold text-[24px]">Address</h6>
-                <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">2529 West 10th street STE 200. Cleveland, Ohio 44113</p>
+                <p className="group-hover:text-mainColor group-hover:transition-all group-hover:duration-150 text-[#3e3e3e]">{contactData.address}</p>
               </div>
             </div>
             <h4 className="lg:text-[30px] md:text-[25px] s:text-[20px] font-semibold font-cairo leading-[40px] s:leading-[30px] mb-3 mt-3">24/7 Customer Support</h4>

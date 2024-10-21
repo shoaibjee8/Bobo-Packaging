@@ -157,51 +157,58 @@ const faqs = product
     setMainImage({ src: newSrc, alt: newAlt });
   };
 
-    // Initialize the `.slick-product` slider
-    useEffect(() => {
-      const initSlickProduct = () => {
-        const $productSlider = $(".slick-product");
-        if ($productSlider.length) {
-          $productSlider.slick({
-            slidesToShow: 4,
-            infinite: true,
-            slidesToScroll: 3,
-            dots: true,
-            arrows: false,
-            speed: 1000,
-            responsive: [
-              {
-                breakpoint: 999,
-                settings: {
-                  slidesToShow: 2,
-                },
-              },
-              {
-                breakpoint: 600,
-                settings: {
-                  slidesToShow: 1,
-                },
-              },
-            ],
-          });
-  
-          // Return the cleanup function to unslick
-          return () => {
-            if ($productSlider.length) {
-              $productSlider.slick("unslick");
-            }
-          };
-        }
-        // Return a no-op function if the slider is not initialized
-        return () => {};
-      };
-  
-      const cleanupSlickProduct = initSlickProduct();
-  
+// Initialize the `.slick-product` slider
+useEffect(() => {
+  const initSlickProduct = () => {
+    const $productSlider = $(".related-products");
+
+    // Check if slider element exists and products are available
+    if ($productSlider.length && relatedProducts.length > 0) {
+      // Initialize the slick slider
+      $productSlider.slick({
+        slidesToShow: 4,
+        infinite: true,
+        slidesToScroll: 3,
+        dots: true,
+        arrows: false,
+        speed: 1000,
+        responsive: [
+          {
+            breakpoint: 999,
+            settings: {
+              slidesToShow: 2,
+            },
+          },
+          {
+            breakpoint: 600,
+            settings: {
+              slidesToShow: 1,
+            },
+          },
+        ],
+      });
+
+      // Return the cleanup function to unslick the slider
       return () => {
-        cleanupSlickProduct();
+        if ($productSlider.hasClass("slick-initialized")) {
+          $productSlider.slick("unslick");
+        }
       };
-    }, []);
+    }
+
+    // If no products or slider element, return a no-op function
+    return () => {};
+  };
+
+  const cleanupSlickProduct = initSlickProduct();
+
+  // Cleanup the slider on component unmount or relatedProducts change
+  return () => {
+    cleanupSlickProduct();
+  };
+}, [relatedProducts]); // Runs the effect when `relatedProducts` changes
+
+
   
     // Initialize the `.slick-reviews` slider
     useEffect(() => {
@@ -318,9 +325,6 @@ const faqs = product
   }, []); // Empty dependency array ensures it only runs on mount
 
 
-  
-
-  
 
   return (
     <>

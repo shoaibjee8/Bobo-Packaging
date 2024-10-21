@@ -18,6 +18,7 @@ import SingleBlog from "./SingleBlog";
 import Cart from "./Cart";
 import axios from 'axios';
 import { API_URL } from "./config";
+import { ContactProvider } from './ContactContext'; // Adjust the path according to your project structure
 
 function App() {
   const [finalProducts, setFinalProducts] = useState([]); // Ensure it's initialized as an empty array
@@ -32,7 +33,6 @@ function App() {
       const proRes = await axios.get(`${API_URL}/api/get-products`);
       if (Array.isArray(proRes.data)) { // Check if response is an array
         setFinalProducts(proRes.data);
-        console.log(proRes.data);
       } else {
         console.error('Expected an array but received:', proRes.data);
       }
@@ -64,26 +64,31 @@ function App() {
 
   return (
     <BrowserRouter>
+     <ContactProvider>
       <div className="App">
         <Header cartAllProduct={cartAllProduct} />
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home setProductId={setProductId}/>} />
           <Route path="/industries" element={<Industry />} />
-          <Route path="/industries/:id" element={<ApperalCategory />} />
+          <Route path="/industries/:id" element={<ApperalCategory setProductId={setProductId}/>} />
           <Route path="/shop/:id" element={<ApperalChild setProductId={setProductId} />} />
           <Route path="/product/:id" element={<Product setProductId={setProductId} />} />
-          <Route path="/all-products" element={<AllProducts />} />
+          <Route path="/product" element={<AllProducts setProductId={setProductId} />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<Cart cartAllProduct={cartAllProduct} setCartAllProduct={setCartAllProduct} />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<SingleBlog />} />
+         
           <Route path="/contact-us" element={<Contact />} />
+    
+          
           <Route path="/terms-condition" element={<Terms />} />
           <Route path="/thank-you" element={<ThankYou />} />
           <Route path="*" element={<Error />} />
         </Routes>
         <Footer />
       </div>
+      </ContactProvider>
     </BrowserRouter>
   );
 }

@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { API_URL } from "../config";
 import axios from "axios";
+import { useContact } from '../ContactContext'; // Adjust the path according to your project structure
+
 
 export default function Header({ cartAllProduct }) {
+
+  const { contactData } = useContact();
 
   const [categories, setCategories] = useState([]); // State for categories
 
@@ -148,12 +152,14 @@ useEffect(() => {
                       {/* Submenu */}
                       <ul className="absolute bg-white py-1 w-52 top-8 transform scale-0 group-hover:scale-100 transition duration-150 ease-in-out origin-top shadow-md">
                       {categories.map((category) => (
+                        <Link to={`/industries/${category.url}`}>
                             <li
                               key={category.id}
                               className="text-sm leading-8 transition-colors duration-150 ease-in-out hover:bg-mainColor hover:text-white px-3"
                             >
-                              <Link to={`/industries/${category.url}`}>{category.name}</Link>
+                              {category.name}
                             </li>
+                            </Link>
                           ))}
                         {/* More submenu items */}
                       </ul>
